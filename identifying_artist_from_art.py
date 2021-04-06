@@ -3,7 +3,6 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from keras.models import load_model
 from tensorflow.keras import models, layers
 
 def get_generators_from_dir(params, rescale=False, enable_augmentation=False):
@@ -69,52 +68,43 @@ def show_dataset_samples(ds):
             plt.title(class_names[int(labels[i])])
             plt.axis('off')
     
-def build_and_compile_binary_model(model_filename, optimizer=None, enable_augmentation=False, rescale=False, load_if_exists=True):
-    if not load_if_exists or not os.path.isfile(model_filename):
-        model = models.Sequential()
+def build_and_compile_binary_model(optimizer=None, enable_augmentation=False, rescale=False, input_shape=(256, 256, 3)):
+    model = models.Sequential()
 
-        if enable_augmentation:
-            augmentation_layers = []
+    if enable_augmentation:
+        augmentation_layers = []
 
-            augmentation_layers.append(layers.experimental.preprocessing.RandomFlip('horizontal'))
-            augmentation_layers.append(layers.experimental.preprocessing.RandomRotation(0.1))
-            augmentation_layers.append(layers.experimental.preprocessing.RandomZoom(0.1))
+        augmentation_layers.append(layers.experimental.preprocessing.RandomFlip('horizontal', input_shape=input_shape))
+        augmentation_layers.append(layers.experimental.preprocessing.RandomRotation(0.1))
+        augmentation_layers.append(layers.experimental.preprocessing.RandomZoom(0.1))
 
-            model.add(models.Sequential(augmentation_layers))
+        model.add(models.Sequential(augmentation_layers))
 
-        if rescale:
-            model.add(layers.experimental.preprocessing.Rescaling(1./255))
+    if rescale:
+        model.add(layers.experimental.preprocessing.Rescaling(1./255, input_shape=input_shape))
 
-        model.add(layers.Conv2D(16, 3, padding='same', activation='relu'))
-        model.add(layers.MaxPooling2D())
-        model.add(layers.Conv2D(32, 3, padding='same', activation='relu'))
-        model.add(layers.MaxPooling2D())
-        model.add(layers.Conv2D(64, 3, padding='same', activation='relu'))
-        model.add(layers.MaxPooling2D())
+    model.add(layers.Conv2D(16, 3, padding='same', activation='relu', input_shape=input_shape))
+    model.add(layers.MaxPooling2D())
+    model.add(layers.Conv2D(32, 3, padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D())
+    model.add(layers.Conv2D(64, 3, padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D())
 
-        model.add(layers.Dropout(0.2))
-        model.add(layers.Flatten())
+    model.add(layers.Dropout(0.2))
+    model.add(layers.Flatten())
 
-        model.add(layers.Dense(128, activation='relu'))
-        model.add(layers.Dense(  1, activation='sigmoid'))
+    model.add(layers.Dense(128, activation='relu'))
+    model.add(layers.Dense(  1, activation='sigmoid'))
 
-        if not optimizer:
-            optimizer = tf.optimizers.Adam(learning_rate=0.001)
+    if not optimizer:
+        optimizer = tf.optimizers.Adam(learning_rate=0.001)
 
-        model.compile(optimizer=optimizer, loss=tf.losses.BinaryCrossentropy(from_logits=True), metrics=['accuracy'])
-    
-        return model
-    
-    else:
-        model = load_model(str_file_to_save, compile=True)
-        
-        return model
+    model.compile(optimizer=optimizer, loss=tf.losses.BinaryCrossentropy(from_logits=True), metrics=['accuracy'])
 
-def run_model(model, train_data, validation_data, epochs, model_filename):
+    return model
+
+def run_model(model, train_data, validation_data, epochs):
     history = model.fit(train_data, validation_data=validation_data, epochs=epochs)
-    
-    if model_filename:
-        model.save(model_filename, include_optimizer=True)
     
     return history
 
