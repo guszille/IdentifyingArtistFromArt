@@ -53,8 +53,22 @@ def get_dataset_from_dir(params):
 
     return train_ds, validation_ds, test_ds
 
+def show_gen_samples(gen, class_names):
+    # Visualize the data: here are the first 9 images from the generator.
+
+    plt.figure(figsize=(10, 10))
+    
+    mat_x, arr_y = gen.next()
+
+    for i in range(9):
+        ax = plt.subplot(3, 3, i + 1)
+
+        plt.imshow(mat_x[i])
+        plt.title(class_names[int(arr_y[i])])
+        plt.axis('off')
+    
 def show_dataset_samples(ds):
-    # Visualize the data: here are the first 9 images from the training dataset.
+    # Visualize the data: here are the first 9 images from the dataset.
 
     plt.figure(figsize=(10, 10))
 
@@ -132,3 +146,18 @@ def show_model_process_results(history, epochs):
     plt.title('Training and Validation Loss')
 
     plt.show()
+    
+def evaluate_and_predict(test_data):
+    image_batch, label_batch = test_data.next()
+    predictions = simple_binary_model.predict_generator(image_batch)
+    predictions = tf.where(predictions < 0.5, 0, 1)
+    predictions = predictions.numpy().flatten()
+
+    plt.figure(figsize=(10, 10))
+    
+    for i in range(9):
+        ax = plt.subplot(3, 3, i + 1)
+        
+        plt.imshow(image_batch[i])
+        plt.title("{} ({})".format(useful_artists[predictions[i]], predictions[i] == label_batch[i]))
+        plt.axis("off")
